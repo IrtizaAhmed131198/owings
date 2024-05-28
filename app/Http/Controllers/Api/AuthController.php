@@ -43,7 +43,7 @@ class AuthController extends Controller
 
         $token = JWTAuth::fromUser($user);
 
-        return response()->json(compact('user', 'token'), 201);
+        return $this->successWithData(['user' => $user] , "User Register" , 200);
     }
 
     public function login(Request $request)
@@ -51,9 +51,9 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
 
         if (!$token = JWTAuth::attempt($credentials)) {
-            return response()->json(['error' => 'Invalid credentials'], 401);
+            return $this->badRequestResponse( "Invalid credentials. Your email or password is wrong" );
         }
 
-        return response()->json(compact('token'));
+        return $this->successWithData(['token' => $token] , "User login succesfully" , 200 );
     }
 }
