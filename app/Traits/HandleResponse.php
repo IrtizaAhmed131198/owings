@@ -15,7 +15,7 @@ trait HandleResponse
     {
         return $this->response([
             'status' => true,
-            'status_code' => $status_code,
+            'statusCode' => $status_code,
             'message' => $msg,
             'data' => $data,
         ], $status_code);
@@ -25,7 +25,7 @@ trait HandleResponse
     {
         return $this->response([
             'status' => true,
-            'status_code' => $status_code,
+            'statusCode' => $status_code,
             'message' => $msg,
         ], $status_code);
     }
@@ -44,9 +44,9 @@ trait HandleResponse
     {
         return $this->response([
             'status' => false,
-            'status_code' => $status_code,
+            'statusCode' => $status_code,
             'message' => $msg,
-            'error_code' => $code,
+            'errorCode' => $code,
             'error' => $errors,
         ], $status_code);
     }

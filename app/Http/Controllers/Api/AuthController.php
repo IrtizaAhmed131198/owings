@@ -27,33 +27,84 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
-            'role_id' => 'required|integer|in:1,2,3', // 1 for admin, 2 for merchant, 3 for customer
+            'role_id' => 'required|in:2,3',
+            'country' => 'required',
+            'city' => 'required',
         ]);
 
         if ($validator->fails()) {
             return $this->fail( 422 ,"Invalid credentials", $validator->errors()->first());
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role_id' => $request->role_id,
-        ]);
+        $user = new User;
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->password = Hash::make($request->password);
+        $user->role_id = $request->role_id;
+        $user->country = $request->country;
+        $user->city = $request->city;
+        $user->status = 1;
+        $user->otp_code = $this->generateUniqueOtp();
+        $user->otp_expires_at = now();
+        $user->save();
+        
+        $role = $request->role_id == 2 ? 'Merchant' : 'Customer';
 
-        $token = JWTAuth::fromUser($user);
+        $token = $user->createToken('MyApp')->plainTextToken;
 
-        return $this->successWithData(['user' => $user] , "User Register" , 200);
+        return $this->successWithData(['token' => $token, 'userId' => $user->id] , $role." account registered succesfully" , 200 );
     }
 
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email',
+            'password' => 'required|string',
+            'roleId' => 'required|in:1,2,3',
+        ]);
 
-        if (!$token = JWTAuth::attempt($credentials)) {
-            return $this->badRequestResponse( "Invalid credentials. Your email or password is wrong" );
+        if ($validator->fails()) {
+            return $this->fail(422, "Invalid credentials", $validator->errors()->first());
         }
 
-        return $this->successWithData(['token' => $token] , "User login succesfully" , 200 );
+        $credentials = [
+            'email' => $request->email,
+            'password' => $request->password,
+            'role_id' => $request->roleId,
+        ];
+
+        $user = User::where('email', $request->email)
+                    ->where('role_id', $request->roleId)
+                    ->first();
+
+        if (!$user) {
+            return $this->fail(422, "Invalid credentials", "User not found with provided email and role");
+        }
+
+        if (!Hash::check($request->password, $user->password)) {
+            return $this->fail(422, "Invalid credentials", "Password is incorrect");
+        }
+
+        if ($user->status != 1) {
+            return $this->fail(403, "Account inactive", "User account is not active");
+        }
+
+        $token = $user->createToken('MyApp')->plainTextToken;
+        $user->remember_token = $token;
+        $user->update();
+
+        return $this->successWithData(['token' => $token, 'userId' => $user->id], "Login successful", 200);
+    }
+
+    private function generateUniqueOtp()
+    {
+        $otp = rand(100000, 999999);
+        $existingOtpCount = DB::table('users')->where('otp_code', $otp)->count();
+
+        if ($existingOtpCount > 0) {
+            return $this->generateUniqueOtp();
+        }
+
+        return $otp;
     }
 }

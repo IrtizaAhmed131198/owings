@@ -2,7 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
+use App\Http\Middleware\ApiAuthenticate;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,24 +24,23 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
 
-Route::group(['middleware' => ['jwt.auth', 'role:1']], function () {
-    // Admin routes here
-    Route::get('/admin', function () {
-        return response()->json(['message' => 'Welcome, Admin']);
-    });
-});
+Route::get('get-countries', [AdminController::class, 'getCountries']);
+Route::get('get-cities/{country_id?}', [AdminController::class, 'getCities']);
 
-Route::group(['middleware' => ['jwt.auth', 'role:2']], function () {
-    // Merchant routes here
-    Route::get('/merchant', function () {
-        return response()->json(['message' => 'Welcome, Merchant']);
-    });
-});
+Route::middleware([ApiAuthenticate::class])->group(function () {
 
-Route::group(['middleware' => ['jwt.auth', 'role:3']], function () {
-    // Customer routes here
-    Route::get('/customer', function () {
-        return response()->json(['message' => 'Welcome, Customer']);
+    Route::middleware('checkrole:1')->group(function () {
+        Route::post('create-countries', [AdminController::class, 'createCountries']);
+        Route::post('create-cities', [AdminController::class, 'createCities']);
     });
+    
+    Route::middleware('checkrole:2')->group(function () {
+        // Merchant routes here
+    });
+    
+    Route::middleware('checkrole:3')->group(function () {
+        // Customer routes here
+    });
+
 });
 

@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth;
 
 class CheckRole
 {
@@ -14,12 +16,19 @@ class CheckRole
      * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next, $role)
     {
-        if (Auth::check() && Auth::user()->role_id == $role) {
-            return $next($request);
+        if (Auth::guard('sanctum')->check()) {
+            $user = Auth::guard('sanctum')->user();
+
+            // Check if the user's role matches the required role
+            if ($user->role_id == $role) {
+                // User is authenticated and has the required role, proceed with the request
+                return $next($request);
+            }
         }
 
-        return response()->json(['error' => 'Unauthorized'], 403);
+        // User is not authenticated or does not have the required role, return a custom JSON response
+        return response()->json(['message' => 'You are not authorized to log in with this role.'], 403);
     }
 }
