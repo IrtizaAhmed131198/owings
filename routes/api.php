@@ -27,17 +27,23 @@ Route::post('login', [AuthController::class, 'login']);
 Route::get('get-countries', [AdminController::class, 'getCountries']);
 Route::get('get-cities/{country_id?}', [AdminController::class, 'getCities']);
 
+Route::post('forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('reset-password', [AuthController::class, 'resetPassword']);
+Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('resend-otp', [AuthController::class, 'resendOtp']);
+
+
 Route::middleware([ApiAuthenticate::class])->group(function () {
 
     Route::middleware('checkrole:1')->group(function () {
         Route::post('create-countries', [AdminController::class, 'createCountries']);
         Route::post('create-cities', [AdminController::class, 'createCities']);
     });
-    
+
     Route::middleware('checkrole:2')->group(function () {
         // Merchant routes here
     });
-    
+
     Route::middleware('checkrole:3')->group(function () {
         // Customer routes here
     });
