@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Middleware\ApiAuthenticate;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\CategoriesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +33,13 @@ Route::post('reset-password', [AuthController::class, 'resetPassword']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('resend-otp', [AuthController::class, 'resendOtp']);
 
+Route::get('get-users', [AuthController::class, 'getUsers']);
+Route::post('update-email', [AuthController::class, 'updateEmail']);
+Route::get('delete-user/{id}', [AuthController::class, 'deleteUser']);
+
+Route::get('categories/{data?}', [CategoriesController::class, 'getAllCategories']);
+Route::get('categories/{id}/subcategories', [CategoriesController::class, 'getSubcategoriesByCategory']);
+
 
 Route::middleware([ApiAuthenticate::class])->group(function () {
 
@@ -46,6 +54,11 @@ Route::middleware([ApiAuthenticate::class])->group(function () {
 
     Route::middleware('checkrole:3')->group(function () {
         // Customer routes here
+    });
+
+    Route::middleware('checkrole:2,3')->group(function () {
+        Route::post('edit-profile', [AuthController::class, 'editProfile']);
+        Route::get('get-edit-profile', [AuthController::class, 'getEditProfile']);
     });
 
 });

@@ -14,10 +14,10 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Crypt;
 use App\Mail\OtpMail;
 use App\Mail\ActivateMail;
-use Tymon\JWTAuth\Facades\JWTAuth;
 use Carbon\Carbon;
 use App\Traits\HandleResponse;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -254,4 +254,111 @@ class AuthController extends Controller
             return $this->fail(500, "Failed to resend OTP email", "An error occurred while sending the OTP email.");
         }
     }
+
+    public function editProfile(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => [
+                'required',
+                'string',
+                'email',
+                Rule::unique('users', 'email')->ignore(Auth::guard('sanctum')->user()->id),
+            ],
+            'aboutUs' => 'nullable|string',
+            'phoneNumber' => 'nullable|string|regex:/^\+?[0-9]{10,15}$/',
+            'whatsapp' => [
+                'nullable',
+                'regex:/^https:\/\/wa\.me\/[0-9]{10,15}\?text=.*$/',
+            ],
+            'instagram' => [
+                'nullable',
+                'regex:/^https:\/\/www\.instagram\.com\/[a-zA-Z0-9._]+\/$/',
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->fail(422, "Invalid credentials", $validator->errors()->first());
+        }
+
+        $user = User::find(Auth::guard('sanctum')->user()->id);
+        if ($user) {
+            $user->email = $request->email;
+            $user->aboutUs = $request->aboutUs;
+            $user->phoneNumber = $request->phoneNumber;
+            $user->whatsapp = $request->whatsapp;
+            $user->instagram = $request->instagram;
+            $user->save();
+
+            return $this->successMessage("Profile updated successfully");
+        } else {
+            return $this->badRequestResponse("User not found");
+        }
+    }
+
+    public function getEditProfile()
+    {
+        $user = User::find(Auth::guard('sanctum')->user()->id);
+        if ($user) {
+            $profileData = [
+                'userId' => Auth::guard('sanctum')->user()->id,
+                'email' => $user->email,
+                'aboutUs' => $user->aboutUs,
+                'phoneNumber' => $user->phoneNumber,
+                'whatsapp' => $user->whatsapp,
+                'instagram' => $user->instagram,
+            ];
+
+            return $this->successWithData($profileData, "Profile get successfully", 200);
+        } else {
+            return $this->badRequestResponse("User not found");
+        }
+
+    }
+
+    public function getUsers()
+    {
+        $users = User::where('status', 1)->get();
+        return $this->successWithData($users, "Fetch Users", 200); 
+    }
+
+    public function updateEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'userId' => 'required|integer|exists:users,id',
+            'email' => [
+                'required',
+                'string',
+                'email',
+                Rule::unique('users', 'email')->ignore($request->userId),
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->fail(422, "Invalid credentials", $validator->errors()->first());
+        }
+
+        $user = User::find($request->userId);
+        if ($user) {
+            $user->email = $request->email;
+            $user->save();
+
+            return $this->successMessage("Email updated successfully");
+        } else {
+            return $this->badRequestResponse("User not found");
+        }
+    }
+
+    public function deleteUser($id)
+    {
+        $user = User::find($id);
+
+        if (!$user) {
+            return $this->fail(404, "User not found");
+        }
+
+        $user->delete();
+
+        return $this->successMessage("User deleted successfully");
+    }
+
 }
