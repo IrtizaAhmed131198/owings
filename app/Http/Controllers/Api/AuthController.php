@@ -47,7 +47,7 @@ class AuthController extends Controller
         $user->phoneNumber = $request->phoneNumber;
         $user->country = $request->country;
         $user->city = $request->city;
-        $user->status = 1;
+        // $user->status = 1;
         $user->otp_code = $this->generateUniqueOtp();
         $user->otp_expires_at = now();
         $user->save();
@@ -120,7 +120,7 @@ class AuthController extends Controller
             return $this->fail(404, "User not found", "No user found with this email address.");
         }
 
-        if ($user->otp_code !== $request->otpCode) {
+        if ($user->otp_code != $request->otpCode) {
             return $this->fail(401, "Invalid OTP", "The OTP code is incorrect.");
         }
 
@@ -318,7 +318,7 @@ class AuthController extends Controller
     public function getUsers()
     {
         $users = User::where('status', 1)->get();
-        return $this->successWithData($users, "Fetch Users", 200); 
+        return $this->successWithData($users, "Fetch Users", 200);
     }
 
     public function updateEmail(Request $request)
