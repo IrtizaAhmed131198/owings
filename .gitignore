@@ -15,3 +15,4 @@ yarn-error.log
 /.vscode
 composer.lock
 owings.zip
+countries_and_cities.json
