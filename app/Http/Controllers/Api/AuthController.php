@@ -25,18 +25,27 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
-            'phoneNumber' => 'required|max:15',
+            'phone_number' => 'required|max:15',
             'roleId' => 'required|in:2,3',
             'country' => 'required',
             'city' => 'required',
-        ]);
+        ];
+
+        if ($request->roleId == 2) {
+            $rules['business_name'] = 'required|string|max:255';
+            $rules['poc'] = 'required';
+            $rules['poc_cell'] = 'required';
+            $rules['images.*'] = 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
-            return $this->fail( 422 ,"Invalid credentials", $validator->errors()->first());
+            return $this->fail(422, "Invalid credentials", $validator->errors()->first());
         }
 
         $user = new User;
@@ -44,13 +53,45 @@ class AuthController extends Controller
         $user->email = $request->email;
         $user->password = Hash::make($request->password);
         $user->role_id = $request->roleId;
-        $user->phoneNumber = $request->phoneNumber;
+        $user->phoneNumber = $request->phone_number;
         $user->country = $request->country;
         $user->city = $request->city;
-        // $user->status = 1;
         $user->otp_code = $this->generateUniqueOtp();
         $user->otp_expires_at = now();
+
+        if ($request->roleId == 2) {
+            $user->business_name = $request->business_name;
+            $user->poc = $request->poc;
+            $user->poc_cell = $request->poc_cell;
+        }
+
         $user->save();
+
+        $imagePaths = [];
+
+        if ($request->roleId == 2 && $request->hasFile('images')) {
+            $images = $request->file('images');
+            if (count($images) > 3) {
+                User::find($user->id)->delete();
+                return $this->fail(422, "You can only upload a maximum of 3 images.");
+            }
+
+            foreach ($images as $image) {
+                $imagePath = time() . '-' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->move(public_path('asset/uploads/merchant_images'), $imagePath);
+
+                DB::table('multi_images')->insert([
+                    'user_id' => $user->id,
+                    'image_path' => 'asset/uploads/merchant_images/' . $imagePath
+                ]);
+
+                $imagePaths[] = 'asset/uploads/merchant_images/' . $imagePath;
+            }
+        } elseif ($request->roleId == 2) {
+            // If role is 2 but no images are uploaded, delete the user
+            User::find($user->id)->delete();
+            return $this->fail(422, "Image upload failed.");
+        }
 
         $role = $request->roleId == 2 ? 'Merchant' : 'Customer';
 
@@ -58,8 +99,23 @@ class AuthController extends Controller
 
         $this->sendOtpEmail($user->email, $user->name, $user->otp_code, $user->otp_expires_at, 'register');
 
-        return $this->successWithData(['token' => $token, 'userId' => $user->id] , $role." account registered wait for otp verification" , 200 );
+        // Build the response data conditionally
+        $responseData = [
+            'token' => $token,
+            'userId' => $user->id,
+        ];
+
+        if ($request->roleId == 2) {
+            $responseData['images'] = $imagePaths;
+        }
+
+        return $this->successWithData(
+            $responseData,
+            $role . " account registered, wait for OTP verification",
+            200
+        );
     }
+
 
     public function login(Request $request)
     {

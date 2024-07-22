@@ -16,3 +16,4 @@ yarn-error.log
 composer.lock
 owings.zip
 countries_and_cities.json
+/public/asset/uploads
