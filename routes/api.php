@@ -6,6 +6,7 @@ use App\Http\Middleware\ApiAuthenticate;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\CategoriesController;
+use App\Http\Controllers\Api\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,7 +50,13 @@ Route::middleware([ApiAuthenticate::class])->group(function () {
     });
 
     Route::middleware('checkrole:2')->group(function () {
-        // Merchant routes here
+        Route::prefix('products')->group(function () {
+            Route::get('/', [ProductController::class, 'index']);
+            Route::post('/add', [ProductController::class, 'store']);
+            Route::get('{id}', [ProductController::class, 'show']);
+            Route::post('/update/{id}', [ProductController::class, 'update']);
+            Route::delete('{id}', [ProductController::class, 'destroy']);
+        });
     });
 
     Route::middleware('checkrole:3')->group(function () {
