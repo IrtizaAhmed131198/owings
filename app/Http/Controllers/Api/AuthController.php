@@ -321,7 +321,7 @@ class AuthController extends Controller
                 Rule::unique('users', 'email')->ignore(Auth::guard('sanctum')->user()->id),
             ],
             'aboutUs' => 'nullable|string',
-            'phoneNumber' => 'nullable|string|regex:/^\+?[0-9]{10,15}$/',
+            'phoneNumber' => 'nullable',
             'whatsapp' => [
                 'nullable',
                 'regex:/^https:\/\/wa\.me\/[0-9]{10,15}\?text=.*$/',
